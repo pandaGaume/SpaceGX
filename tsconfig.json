@@ -1,0 +1,11 @@
+{
+    "include": ["src", "types"],
+    "compilerOptions": {
+      "moduleResolution": "Node",
+      "target": "es6",
+      "allowJs": true,
+      "rootDir": "./src",
+      "baseUrl": "./src",
+      "outDir": "./src/build",
+    }
+}

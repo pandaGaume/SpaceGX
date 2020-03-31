@@ -1,0 +1,20 @@
+{
+  "name": "spacegx",
+  "version": "1.0.0",
+  "description": "3D space webgl",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "author": "Guillaume Pelletier",
+  "license": "MIT"
+}
