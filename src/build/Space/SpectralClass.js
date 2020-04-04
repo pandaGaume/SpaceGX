@@ -94,3 +94,4 @@ SpectralClass.HarwardClassification = [
     SpectralClass.M
 ];
 SpectralClass.TemperatureRange = new QR(new Temperature(2400, Temperature.Units.k), new Temperature(60000, Temperature.Units.k));
+//# sourceMappingURL=SpectralClass.js.map

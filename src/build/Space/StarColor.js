@@ -299,3 +299,4 @@ StarColor.ColorTable = [
 ];
 /* this is where we prepare the static matrix (Space.StarColorFactory.Matrix) to efficient color lookup. */
 StarColor.Matrix = StarColor._buildIndex(StarColor.ColorTable);
+//# sourceMappingURL=StarColor.js.map

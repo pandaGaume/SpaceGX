@@ -5,4 +5,3 @@ export * from "./Color";
 export * from "./Geometry/index";
 export * from "./Space/index";
 export * from "./Babylon/index";
-//# sourceMappingURL=index.js.map

@@ -16,3 +16,4 @@ export var CelestialNodeType;
     CelestialNodeType[CelestialNodeType["BLACK_HOLE"] = 13] = "BLACK_HOLE";
     CelestialNodeType[CelestialNodeType["RING"] = 14] = "RING";
 })(CelestialNodeType || (CelestialNodeType = {}));
+//# sourceMappingURL=ICelestialObject.js.map

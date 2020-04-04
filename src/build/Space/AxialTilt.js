@@ -16,3 +16,4 @@ export class AxialTilt {
 }
 AxialTilt.defaultAngleUnit = Angle.Units.d;
 AxialTilt.defaultPeriodUnit = Timespan.Units.s;
+//# sourceMappingURL=AxialTilt.js.map

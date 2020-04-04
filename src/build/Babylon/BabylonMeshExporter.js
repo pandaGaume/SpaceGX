@@ -11,3 +11,4 @@ export class BabylonMeshExporter {
         return target;
     }
 }
+//# sourceMappingURL=BabylonMeshExporter.js.map

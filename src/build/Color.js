@@ -84,3 +84,4 @@ export class HSLColor {
     }
     ;
 }
+//# sourceMappingURL=Color.js.map

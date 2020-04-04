@@ -5,12 +5,15 @@ module.exports = {
   entry: {
     space:'./src/build/index.js'
   },
-  mode:"production",
+  mode:"development",
   devtool: 'source-map',
   output: {
     library: 'SPACEGL',
     libraryTarget: 'var',
     filename: '[name].' + config.version + '.js' ,
     path: path.resolve(__dirname, 'dist'),
+  },
+  optimization: {
+    minimize: false
   }
 };

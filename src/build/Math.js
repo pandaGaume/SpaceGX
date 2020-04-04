@@ -29,3 +29,4 @@ export class Range extends AbstractRange {
         return a && b ? b - a : 0;
     }
 }
+//# sourceMappingURL=Math.js.map

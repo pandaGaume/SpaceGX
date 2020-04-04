@@ -7,5 +7,7 @@
       "rootDir": "./src",
       "baseUrl": "./src",
       "outDir": "./src/build",
+      "declaration": true,
+      "sourceMap": true
     }
 }
