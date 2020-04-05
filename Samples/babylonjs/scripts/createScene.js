@@ -79,6 +79,20 @@ function showVertexIndices(mesh, color, size, scene) {
     }
 }
 
+function showUVIndices(mesh, color, size, scene) {
+ 
+    var positions = mesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+    var uvs = mesh.getVerticesData(BABYLON.VertexBuffer.UVKind);
+    for (var i = 0, j = 0; i < positions.length; i += 3, j+=2) {
+        var position = BABYLON.Vector3.FromArray(positions, i);
+        var normal = position.clone(); 
+
+        var uv = BABYLON.Vector2.FromArray(uvs, j);
+        var txt = i/3 < 5 ? "0" : i/3 < 10 ? "5" : "" + uv.x; 
+        makeOrientedTextPlane(txt,color,size,size,position,normal,scene);
+    }
+}
+
 function showTriangleIndices(mesh, color, size, scene) {
  
     var indices = mesh.getIndices();
@@ -107,16 +121,20 @@ function createScene(canvas,engine){
 
     // Add lights to the scene
     var light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
+    var light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(-1, 1, 0), scene);
  
     showWorldAxis(1,scene);
 
     // Add and manipulate meshes in the scene
-    var polyhedre = SPACEGL.MeshFactory.CreateIcosphere({},10,6);
+    var polyhedre = SPACEGL.MeshFactory.CreateIcosphere({},10,5);
     var isocahedre = new SPACEGL.BabylonMeshExporter().exportMesh( polyhedre, new BABYLON.Mesh("isocahedre",scene));
-    isocahedre.material = new BABYLON.StandardMaterial("w",scene);
-    isocahedre.material.wireframe = true;
-    isocahedre.material.diffuseColor = new BABYLON.Color3(1, 0, 0);
- 
+    //var isocahedre = new BABYLON.MeshBuilder.CreateSphere("isocahedre",{diameter  : 20},scene);
+    isocahedre.material = new BABYLON.StandardMaterial("texture",scene)
+    isocahedre.material.diffuseTexture = new BABYLON.Texture("./../../../images/space/planets/earth/2k/earth_map.jpg", scene);
+    // isocahedre.enableEdgesRendering(.9999);    
+    // isocahedre.edgesWidth = 8.0;
+    // isocahedre.edgesColor = new BABYLON.Color4(1, 0, 0, 1);
+    // showUVIndices(isocahedre,"black",2,scene);
     //showVertexIndices(isocahedre,"black",.3,scene);
     //showTriangleIndices(isocahedre,"black",.4,scene);
     //showNormals(isocahedre,.1,BABYLON.Color3.Blue(),scene);

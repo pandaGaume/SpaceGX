@@ -10,7 +10,9 @@ export class BabylonMeshExporter implements IMeshExporter<BABYLON.Mesh> {
         }
         target.setVerticesData(BABYLON.VertexBuffer.PositionKind, shape.vertices, true);
         target.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals, true);
-        target.setVerticesData(BABYLON.VertexBuffer.UVKind, shape.uvs, true);
+        if( shape.uvs && shape.uvs.length > 0 ){
+            target.setVerticesData(BABYLON.VertexBuffer.UVKind, shape.uvs[0], true);
+        }
         target.setIndices(shape.indices);
         return target;
     }
