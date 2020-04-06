@@ -126,19 +126,20 @@ function createScene(canvas,engine){
     showWorldAxis(1,scene);
 
     // Add and manipulate meshes in the scene
-    var polyhedre = SPACEGL.MeshFactory.CreateIcosphere({},10,5);
+    var polyhedre = SPACEGL.MeshFactory.CreateIcosphere({},10,6);
     var isocahedre = new SPACEGL.BabylonMeshExporter().exportMesh( polyhedre, new BABYLON.Mesh("isocahedre",scene));
-    //var isocahedre = new BABYLON.MeshBuilder.CreateSphere("isocahedre",{diameter  : 20},scene);
+    //var isocahedre = new BABYLON.MeshBuilder.CreateSphere("isocahedre",{diameter  : 10},scene);
     isocahedre.material = new BABYLON.StandardMaterial("texture",scene)
-    isocahedre.material.diffuseTexture = new BABYLON.Texture("./../../../images/space/planets/earth/2k/earth_map.jpg", scene);
-    // isocahedre.enableEdgesRendering(.9999);    
-    // isocahedre.edgesWidth = 8.0;
-    // isocahedre.edgesColor = new BABYLON.Color4(1, 0, 0, 1);
-    // showUVIndices(isocahedre,"black",2,scene);
+    isocahedre.material.diffuseTexture = new BABYLON.Texture("./../../../images/space/moons/moon/2k/moon_map.jpg", scene);
+    //isocahedre.material.bumpTexture = new BABYLON.Texture("./../../../images/space/moons/moon/2k/moon_normal_map.jpg", scene);
+    //isocahedre.material.diffuseTexture = new BABYLON.Texture("./../../../images/space/planets/earth/2k/earth_map.jpg", scene);
+    //isocahedre.enableEdgesRendering(.9999);    
+    //isocahedre.edgesWidth = 8.0;
+    //isocahedre.edgesColor = new BABYLON.Color4(1, 0, 0, 1);
+    //showUVIndices(isocahedre,"black",2,scene);
     //showVertexIndices(isocahedre,"black",.3,scene);
     //showTriangleIndices(isocahedre,"black",.4,scene);
     //showNormals(isocahedre,.1,BABYLON.Color3.Blue(),scene);
-
     return scene;
 };
 

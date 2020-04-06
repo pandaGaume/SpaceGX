@@ -1,3 +1,4 @@
+import { Scalar } from './../Math';
 import { MeshProcessor } from './MeshProcessor';
 import { IMesh } from "./Mesh";
 
@@ -106,17 +107,18 @@ export class MeshFactory {
         }
       
         /* compute 12 vertices at 1st and 2nd rows */
-        for(; i < 16; i++) {
+         for(let k = 0; k < 6; i++,k++) {
+
             /* rows 1 and 2 indexes */
             let i1 = i * 3;     
             let i2 = i1 + 18;   
 
-            let s = i * H_ANGLE;
+            let s = k * H_ANGLE;
             let h1 = hAngle1 + s;
             let h2 = hAngle2 + s ;
 
             /*x*/
-            let a = xz * Math.cos(h1);
+            let a = h1 == 0 ? xz : xz * Math.cos(h1);
             let b = xz * Math.cos(h2);
             n[i1] = a;
             n[i2] = b;
@@ -130,7 +132,7 @@ export class MeshFactory {
             v[i2++] = -y * radius;
 
             /*z*/
-            a = xz * Math.sin(h1);
+            a = h1 == 0 ? 0 : xz * Math.sin(h1);
             b = xz * Math.sin(h2);
             n[i1] = a;
             n[i2] = b;
@@ -258,38 +260,41 @@ export class MeshFactory {
 
         v.push(x*radius,y*radius,z*radius);
 
+        i1 = p1*2;
+        i2 = p2*2;
 
-        if( shape.uvs && shape.uvs.length > 0 ){
+        /* 
+           vertices are not distributed evenly across longitude and latitude then we MUST compute the uv with formula
+           theta is from +/-[0-PI] 
+           phi is from  [0-PI]
+        */  
+        let theta = Math.atan2(z,x);
+        let phi = Math.acos(y) ; 
 
-            let i1 = p1*2;
-            let i2 = p2*2;
+        for(let j=0;j!= shape.uvs.length; j++){
+            let uvs:number[] = shape.uvs[j];
 
-            /* special process for north and south segments where we project u on verticals */
-            if( p1 < 10 || p2 < 10 ){
+            let u1 = uvs[i1++];
+            let u2 = uvs[i2++]
+            let v1 = uvs[i1];
+            let v2 = uvs[i2]; 
 
-                for(let j=0;j!= shape.uvs.length; j++){
+            let a = theta / (2*Math.PI) ;
+            a = Scalar.WithinEpsilon(a,0)?0:a;
 
-                    let uvs:number[] = shape.uvs[j];
-                    /* ensure p2 - p1 is v positiv */
-                    let v1 = uvs[i1+1];
-                    let v2 = uvs[i2+1];
-                    let dv = v2-v1;
-                    /* lets process north and south cases : north is [0:4] and south [5:9] */
-                    let u:number = p1 < 10 ? uvs[i2] : uvs[i1];
-                    let v:number = v1 + dv * t ;
-                    uvs.push(u,v);
-                }
-
-            } else {
-
-                for(let j=0;j!= shape.uvs.length; j++){
-                    let uvs:number[] = shape.uvs[j];
-                    let u:number = uvs[i1] + (uvs[i2++] - uvs[i1++]) * t ;
-                    let v:number = uvs[i1] + (uvs[i2  ] - uvs[i1  ]) * t ;
-                    uvs.push(u,v);
-                }
+            let u:number = theta >= 0 ?  a : 1 + a ;
+            let d1 = u1 - u;
+            let d2 = u2 - u;
+            if( Math.abs(d1) > .5 || Math.abs(d2) > .5 ) {
+                u+=1;
             }
+           
+
+            let v:number = 1 - phi/Math.PI ;
+
+            uvs.push(u,v);
         }
+ 
         return i;
     }
 }

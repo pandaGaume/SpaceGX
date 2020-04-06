@@ -1,3 +1,23 @@
+export class Scalar {
+    static WithinEpsilon(a, b, epsilon = Scalar.EPSILON) {
+        let num = a - b;
+        return -epsilon <= num && num <= epsilon;
+    }
+    ;
+}
+Scalar.EPSILON = 1.401298E-45;
+Scalar.Sign = function (value) {
+    return value > 0 ? 1 : -1;
+};
+Scalar.Clamp = function (value, min, max) {
+    if (min === void 0) {
+        min = 0;
+    }
+    if (max === void 0) {
+        max = 1;
+    }
+    return Math.min(max, Math.max(min, value));
+};
 export class AbstractRange {
     constructor(min, max = undefined) {
         this.min = min;

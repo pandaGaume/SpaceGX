@@ -1,3 +1,4 @@
+import { Scalar } from './../Math';
 export var PlatonicSolids;
 (function (PlatonicSolids) {
     PlatonicSolids[PlatonicSolids["tetrahedron"] = 0] = "tetrahedron";
@@ -81,15 +82,15 @@ export class MeshFactory {
             n.push(0, -1, 0);
         }
         /* compute 12 vertices at 1st and 2nd rows */
-        for (; i < 16; i++) {
+        for (let k = 0; k < 6; i++, k++) {
             /* rows 1 and 2 indexes */
             let i1 = i * 3;
             let i2 = i1 + 18;
-            let s = i * H_ANGLE;
+            let s = k * H_ANGLE;
             let h1 = hAngle1 + s;
             let h2 = hAngle2 + s;
             /*x*/
-            let a = xz * Math.cos(h1);
+            let a = h1 == 0 ? xz : xz * Math.cos(h1);
             let b = xz * Math.cos(h2);
             n[i1] = a;
             n[i2] = b;
@@ -101,7 +102,7 @@ export class MeshFactory {
             v[i1++] = y * radius;
             v[i2++] = -y * radius;
             /*z*/
-            a = xz * Math.sin(h1);
+            a = h1 == 0 ? 0 : xz * Math.sin(h1);
             b = xz * Math.sin(h2);
             n[i1] = a;
             n[i2] = b;
@@ -210,31 +211,31 @@ export class MeshFactory {
         i = v.length / 3;
         map[key] = i;
         v.push(x * radius, y * radius, z * radius);
-        if (shape.uvs && shape.uvs.length > 0) {
-            let i1 = p1 * 2;
-            let i2 = p2 * 2;
-            /* special process for north and south segments where we project u on verticals */
-            if (p1 < 10 || p2 < 10) {
-                for (let j = 0; j != shape.uvs.length; j++) {
-                    let uvs = shape.uvs[j];
-                    /* ensure p2 - p1 is v positiv */
-                    let v1 = uvs[i1 + 1];
-                    let v2 = uvs[i2 + 1];
-                    let dv = v2 - v1;
-                    /* lets process north and south cases : north is [0:4] and south [5:9] */
-                    let u = p1 < 10 ? uvs[i2] : uvs[i1];
-                    let v = v1 + dv * t;
-                    uvs.push(u, v);
-                }
+        i1 = p1 * 2;
+        i2 = p2 * 2;
+        /*
+           vertices are not distributed evenly across longitude and latitude then we MUST compute the uv with formula
+           theta is from +/-[0-PI]
+           phi is from  [0-PI]
+        */
+        let theta = Math.atan2(z, x);
+        let phi = Math.acos(y);
+        for (let j = 0; j != shape.uvs.length; j++) {
+            let uvs = shape.uvs[j];
+            let u1 = uvs[i1++];
+            let u2 = uvs[i2++];
+            let v1 = uvs[i1];
+            let v2 = uvs[i2];
+            let a = theta / (2 * Math.PI);
+            a = Scalar.WithinEpsilon(a, 0) ? 0 : a;
+            let u = theta >= 0 ? a : 1 + a;
+            let d1 = u1 - u;
+            let d2 = u2 - u;
+            if (Math.abs(d1) > .5 || Math.abs(d2) > .5) {
+                u += 1;
             }
-            else {
-                for (let j = 0; j != shape.uvs.length; j++) {
-                    let uvs = shape.uvs[j];
-                    let u = uvs[i1] + (uvs[i2++] - uvs[i1++]) * t;
-                    let v = uvs[i1] + (uvs[i2] - uvs[i1]) * t;
-                    uvs.push(u, v);
-                }
-            }
+            let v = 1 - phi / Math.PI;
+            uvs.push(u, v);
         }
         return i;
     }
