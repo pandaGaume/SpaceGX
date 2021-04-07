@@ -106,12 +106,17 @@ class BabylonMeshExporter {
         target.setVerticesData(BABYLON.VertexBuffer.PositionKind, shape.vertices, true);
         target.setVerticesData(BABYLON.VertexBuffer.NormalKind, normals, true);
         if (shape.uvs && shape.uvs.length > 0) {
-            target.setVerticesData(BABYLON.VertexBuffer.UVKind, shape.uvs[0], true);
+            for (let i = 0; i != shape.uvs.length && i < BabylonMeshExporter.UVKinds.length; i++) {
+                if (shape.uvs[i]) {
+                    target.setVerticesData(BabylonMeshExporter.UVKinds[i], shape.uvs[i], true);
+                }
+            }
         }
         target.setIndices(shape.indices);
         return target;
     }
 }
+BabylonMeshExporter.UVKinds = [BABYLON.VertexBuffer.UVKind, BABYLON.VertexBuffer.UV2Kind, BABYLON.VertexBuffer.UV3Kind, BABYLON.VertexBuffer.UV4Kind, BABYLON.VertexBuffer.UV5Kind, BABYLON.VertexBuffer.UV6Kind];
 //# sourceMappingURL=BabylonMeshExporter.js.map
 
 /***/ }),
@@ -414,6 +419,20 @@ EventEmitter.defaultMaxListeners = 10;
 
 /***/ }),
 
+/***/ "./src/build/Geometry/Mesh.js":
+/*!************************************!*\
+  !*** ./src/build/Geometry/Mesh.js ***!
+  \************************************/
+/*! no exports provided */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+
+//# sourceMappingURL=Mesh.js.map
+
+/***/ }),
+
 /***/ "./src/build/Geometry/MeshFactory.js":
 /*!*******************************************!*\
   !*** ./src/build/Geometry/MeshFactory.js ***!
@@ -425,7 +444,7 @@ EventEmitter.defaultMaxListeners = 10;
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PlatonicSolids", function() { return PlatonicSolids; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MeshFactory", function() { return MeshFactory; });
-/* harmony import */ var _Math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./../Math */ "./src/build/Math.js");
+/* harmony import */ var _MeshProcessor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MeshProcessor */ "./src/build/Geometry/MeshProcessor.js");
 
 var PlatonicSolids;
 (function (PlatonicSolids) {
@@ -497,8 +516,8 @@ class MeshFactory {
         const xz = Math.cos(V_ANGLE);
         let v = []; /* array of 21 vertices (x,y,z) */
         let n = []; /* array of 21 vertices (x,y,z) */
-        var hAngle1 = 0; /* start from 0 deg at 1st row */
-        var hAngle2 = H_ANGLE / 2; /* start from +36 deg at 2nd row */
+        var hAngle1 = -Math.PI; /* start from -180 deg at 1st row */
+        var hAngle2 = (H_ANGLE / 2) - Math.PI; /* start from -144 deg at 2nd row */
         /* the first top vertex at (0, r, 0). we use 5 vertices in order to isolate uv's coordinate for quad image texture */
         for (var i = 0; i < 5; i++) {
             v.push(0, radius, 0);
@@ -545,132 +564,41 @@ class MeshFactory {
         shape.uvs = [];
         let a = 2 / 3;
         let b = 1 / 3;
-        shape.uvs.push([/*north*/ .1, 1, .3, 1, .5, 1, .7, 1, .9, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
+        shape.uvs.push([/*north*/ 0, 1, .2, 1, .4, 1, .6, 1, .8, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
             /* equatorial */ 0, a, .2, a, .4, a, .6, a, .8, a, 1, a, .1, b, .3, b, .5, b, .7, b, .9, b, 1.1, b]);
         return shape;
     }
-    /*
-        icosphere is a particular simple tesselation method where we project subdivided points to the sphere surface.
-        then we DO NOT relay on memory/compute intensive subdivision method.
-        TODO : because of incremental error propagation, we might consider to find analytic approach for vertex coordinate generation instead as parametric subdivision methods.
-    */
-    static CreateIcosphere(shape, radius, subdivisionLevel = MeshFactory.DefaultSubdivisionLevel, pattern = MeshFactory.DefaultLoopPattern) {
+    static GreateGeodesicGrid(shape, radius, a = MeshFactory.DefaultSubdivisionLevelA) {
         radius = Math.abs(radius || MeshFactory.DefaultRadius);
         shape = shape = MeshFactory._createIcosphereBase(shape || {}, radius);
-        subdivisionLevel = subdivisionLevel === undefined ? MeshFactory.DefaultSubdivisionLevel : Math.abs(subdivisionLevel);
-        pattern = pattern == undefined ? MeshFactory.DefaultLoopPattern : pattern != 4 && pattern != 9 ? MeshFactory.DefaultLoopPattern : pattern; /* ensure patternn is 4 OR 9 */
-        for (let i = 0; i != subdivisionLevel; i++) {
-            let map = {};
-            let newFaces = [];
-            let n = shape.indices.length;
-            for (let f = 0; f !== n;) {
-                let p0 = shape.indices[f++];
-                let p1 = shape.indices[f++];
-                let p2 = shape.indices[f++];
-                switch (pattern) {
-                    case (9):
-                        {
-                            /* 0
-                              / \
-                             /   \
-                            a --- g
-                           / \   / \
-                          /   \ /   \
-                         d --- c --- f
-                        / \   / \   / \
-                       /   \ /   \ /   \
-                      1 --- e --- b --- 2 */
-                            let t13 = 1.0 / 3;
-                            let t23 = 2.0 / 3;
-                            let t12 = .5;
-                            let a = MeshFactory._getParametricPoint(shape, p0, p1, t13, radius, map);
-                            let b = MeshFactory._getParametricPoint(shape, p1, p2, t23, radius, map);
-                            let c = MeshFactory._getParametricPoint(shape, a, b, t12, radius, map);
-                            let d = MeshFactory._getParametricPoint(shape, p0, p1, t23, radius, map);
-                            let e = MeshFactory._getParametricPoint(shape, p1, p2, t13, radius, map);
-                            let f = MeshFactory._getParametricPoint(shape, p2, p0, t13, radius, map);
-                            let g = MeshFactory._getParametricPoint(shape, p2, p0, t23, radius, map);
-                            newFaces.push(p0, a, g, a, d, c, a, c, g, g, c, f, d, p1, e, d, e, c, c, e, b, c, b, f, f, b, p2);
-                            break;
-                        }
-                    case (4):
-                    default: {
-                        /* 0
-                          / \
-                         /   \
-                        a --- c
-                       / \   / \
-                      /   \ /   \
-                     1 --- b --- 2 */
-                        let t = 0.5;
-                        let a = MeshFactory._getParametricPoint(shape, p0, p1, t, radius, map);
-                        let b = MeshFactory._getParametricPoint(shape, p1, p2, t, radius, map);
-                        let c = MeshFactory._getParametricPoint(shape, p2, p0, t, radius, map);
-                        newFaces.push(p0, a, c, a, p1, b, a, b, c, c, b, p2);
-                    }
+        a = a === undefined ? MeshFactory.DefaultSubdivisionLevelA : Math.abs(a);
+        let n = shape.indices.length;
+        let map = {};
+        let newFaces = [];
+        for (let fi = 0; fi !== n;) {
+            let p0 = shape.indices[fi++];
+            let p1 = shape.indices[fi++];
+            let p2 = shape.indices[fi++];
+            let vedge0 = _MeshProcessor__WEBPACK_IMPORTED_MODULE_0__["MeshProcessor"].DivideEdge(shape, p1, p0, a, radius, map);
+            let vedge1 = _MeshProcessor__WEBPACK_IMPORTED_MODULE_0__["MeshProcessor"].DivideEdge(shape, p1, p2, a, radius, map);
+            let hedges = vedge0.map((value, index, array) => _MeshProcessor__WEBPACK_IMPORTED_MODULE_0__["MeshProcessor"].DivideEdge(shape, value, vedge1[index], index, radius, undefined));
+            let row0, row1;
+            for (let i = 0; i != a;) {
+                row0 = hedges[i++];
+                row1 = hedges[i];
+                newFaces.push(row1[0], row0[0], row1[1]);
+                for (let k = 1; k < row1.length - 1; k++) {
+                    newFaces.push(row1[k], row0[k - 1], row0[k]);
+                    newFaces.push(row1[k], row0[k], row1[k + 1]);
                 }
             }
-            shape.indices = newFaces;
         }
+        shape.indices = newFaces;
         return shape;
-    }
-    static _getParametricPoint(shape, p1, p2, t, radius, map) {
-        /* IS the tricks to share the same point when divide top or bottom segment */
-        var k1 = p1 < 10 ? "*" : p1.toString();
-        var k2 = p2 < 10 ? "*" : p2.toString();
-        var key = (p1 < p2 ? k1 + "-" + k2 : k2 + "-" + k1) + "_" + t;
-        var i = map[key];
-        if (i) {
-            delete map[key]; /* avoid too many key */
-            return i;
-        }
-        let i1 = p1 * 3;
-        let i2 = p2 * 3;
-        let v = shape.vertices;
-        let x = v[i1] + (v[i2++] - v[i1++]) * t;
-        let y = v[i1] + (v[i2++] - v[i1++]) * t;
-        let z = v[i1] + (v[i2] - v[i1]) * t;
-        let l = Math.sqrt(x * x + y * y + z * z);
-        x /= l;
-        y /= l;
-        z /= l;
-        let n = shape.normals;
-        n.push(x, y, z);
-        i = v.length / 3;
-        map[key] = i;
-        v.push(x * radius, y * radius, z * radius);
-        i1 = p1 * 2;
-        i2 = p2 * 2;
-        /*
-           vertices are not distributed evenly across longitude and latitude then we MUST compute the uv with formula
-           theta is from +/-[0-PI]
-           phi is from  [0-PI]
-        */
-        let theta = Math.atan2(z, x);
-        let phi = Math.acos(y);
-        for (let j = 0; j != shape.uvs.length; j++) {
-            let uvs = shape.uvs[j];
-            let u1 = uvs[i1++];
-            let u2 = uvs[i2++];
-            let v1 = uvs[i1];
-            let v2 = uvs[i2];
-            let a = theta / (2 * Math.PI);
-            a = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(a, 0) ? 0 : a;
-            let u = theta >= 0 ? a : 1 + a;
-            let d1 = u1 - u;
-            let d2 = u2 - u;
-            if (Math.abs(d1) > .5 || Math.abs(d2) > .5) {
-                u += 1;
-            }
-            let v = 1 - phi / Math.PI;
-            uvs.push(u, v);
-        }
-        return i;
     }
 }
 MeshFactory.DefaultRadius = 1.0;
-MeshFactory.DefaultSubdivisionLevel = 4;
-MeshFactory.DefaultLoopPattern = 4;
+MeshFactory.DefaultSubdivisionLevelA = 8;
 //# sourceMappingURL=MeshFactory.js.map
 
 /***/ }),
@@ -685,157 +613,85 @@ MeshFactory.DefaultLoopPattern = 4;
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MeshProcessor", function() { return MeshProcessor; });
+/* harmony import */ var _Math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./../Math */ "./src/build/Math.js");
+
 class MeshProcessor {
-    static LoopSubdivision(shape, level) {
-        level = level === undefined ? MeshProcessor.DefaultSubdivisionLevel : Math.abs(level);
-        for (let i = 0; i != level; i++) {
-            let oddcache = {};
-            let newFaces = [];
-            let n = shape.indices.length;
-            let v = shape.vertices;
-            let l = v.length / 3;
-            let evencache = [...Array(l)].map(a => []);
-            /* compute odd */
-            for (let f = 0; f !== n;) {
-                let tmp = f;
-                let p0 = shape.indices[f++];
-                let p1 = shape.indices[f++];
-                let p2 = shape.indices[f++];
-                /* 0
-                  / \
-                 /   \
-                a --- c
-               / \   / \
-              /   \ /   \
-             1 --- b --- 2 */
-                let a = MeshProcessor._splitSegment(shape, tmp, p0, p1, p2, oddcache);
-                let b = MeshProcessor._splitSegment(shape, tmp, p1, p2, p0, oddcache);
-                let c = MeshProcessor._splitSegment(shape, tmp, p2, p0, p1, oddcache);
-                newFaces.push(p0, a, c, a, p1, b, a, b, c, c, b, p2);
-                /* prepare even cache */
-                MeshProcessor._pushSingle(evencache[p0], p1, p2);
-                MeshProcessor._pushSingle(evencache[p1], p0, p2);
-                MeshProcessor._pushSingle(evencache[p2], p0, p1);
+    static DivideEdge(shape, p0, p1, a, radius, map) {
+        if (map) {
+            var key = p0 + '_' + p1;
+            var list = map[key];
+            if (list) {
+                return list;
             }
-            /* compute remain odd on bounds bounds
-                         0
-                        / \
-                       /   \
-                      /     \
-                    1/2--X--1/2 */
-            let bounds = Object.keys(oddcache).map(key => oddcache[key]);
-            for (var j = 0; j != bounds.length; j++) {
-                let odd = bounds[j];
-                let i = odd[0] * 3;
-                let a = odd[1] * 3;
-                let b = odd[2] * 3;
-                v[i++] = (v[a++] + v[b++]) / 2;
-                v[i++] = (v[a++] + v[b++]) / 2;
-                v[i] = (v[a] + v[b]) / 2;
+            var inversedkey = p1 + '_' + p0;
+            list = map[inversedkey];
+            if (list) {
+                return list.slice().reverse();
             }
-            /* compute even */
-            MeshProcessor._computeEvens(shape, evencache);
-            shape.indices = newFaces;
+            list = MeshProcessor._divideEdge0(shape, p0, p1, a, radius);
+            map[key] = list;
+            return list;
         }
-        return shape;
+        return MeshProcessor._divideEdge0(shape, p0, p1, a, radius);
     }
-    static _pushSingle(array, ...params) {
-        for (let i = 0; i != params.length; i++) {
-            let value = params[i];
-            let found = false;
-            if (array.length) {
-                let j = 0;
-                do {
-                    found = array[j] === value;
-                } while (!found && ++j < array.length);
+    static _divideEdge0(shape, p0, p1, a, radius) {
+        let list = [p0];
+        if (a != 0 && p0 != p1) {
+            if (a > 1) {
+                let vertices = shape.vertices;
+                let normals = shape.normals;
+                let uvs = shape.uvs[0];
+                let i0x = p0 * 3;
+                let i0y = i0x + 1;
+                let i0z = i0x + 2;
+                let i1x = p1 * 3;
+                let i1y = i1x + 1;
+                let i1z = i1x + 2;
+                let dx = (vertices[i1x] - vertices[i0x]) / a;
+                let dy = (vertices[i1y] - vertices[i0y]) / a;
+                let dz = (vertices[i1z] - vertices[i0z]) / a;
+                let n = vertices.length / 3;
+                for (let i = 1; i != a; i++) {
+                    let x = vertices[i0x] + dx * i;
+                    let y = vertices[i0y] + dy * i;
+                    let z = vertices[i0z] + dz * i;
+                    let l = Math.sqrt(x * x + y * y + z * z);
+                    x /= l;
+                    y /= l;
+                    z /= l;
+                    list.push(n++);
+                    vertices.push(x * radius, y * radius, z * radius);
+                    normals.push(x, y, z);
+                    /*
+                        vertices are NOT distributed evenly across longitude and latitude then we MUST compute the uv with formula
+                        theta is from [-PI  ,PI  ]
+                        phi   is from [-PI/2,PI/2]
+                    */
+                    let theta = Math.atan2(z, x) - Math.PI;
+                    let phi = Math.acos(y);
+                    let v = 1 - phi / Math.PI; // normalize 
+                    v = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(v, 0) ? 0 : v; // avoid artifact
+                    v = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(v, 1) ? 1 : v; // avoid artifact
+                    let u = theta / (2 * Math.PI); // normalize
+                    u = theta >= 0 ? u : 1 + u;
+                    u = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(u, 0) ? 0 : u; // avoid artifact 
+                    u = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(u, 1) ? 1 : u; // avoid artifact 
+                    //avoid zip effect : 
+                    let u1 = uvs[p0 * 2];
+                    let u2 = uvs[p1 * 2];
+                    let d1 = u1 - u;
+                    let d2 = u2 - u;
+                    if (Math.abs(d1) > .5 || Math.abs(d2) > .5) {
+                        u += 1;
+                    }
+                    uvs.push(u, v);
+                }
             }
-            if (!found) {
-                array.push(value);
-            }
+            list.push(p1);
         }
-    }
-    ;
-    static _splitSegment(shape, fi, a, b, c0, map) {
-        var key = (a < b ? "" + a + "-" + b : "" + b + "-" + a);
-        var cached = map[key];
-        let v = shape.vertices;
-        if (cached) {
-            /* compute odd with 2 faces :
-                        1/8
-                        / \
-                       /   \
-                      /     \
-                    3/8--X--3/8
-                     \      /
-                      \    /
-                       \  /
-                        1/8 */
-            let i = cached[0] * 3;
-            let a = cached[1] * 3;
-            let b = cached[2] * 3;
-            let c = cached[3] * 3;
-            let d = c0 * 3;
-            let k3 = 3 / 8;
-            let k1 = 1 / 8;
-            v[i++] = k3 * (v[a++] + v[b++]) + k1 * (v[c++] + v[d++]);
-            v[i++] = k3 * (v[a++] + v[b++]) + k1 * (v[c++] + v[d++]);
-            v[i] = k3 * (v[a] + v[b]) + k1 * (v[c] + v[d]);
-            delete map[key]; /* avoid too many key */
-            return cached[0];
-        }
-        let faces = shape.indices;
-        let i = shape.vertices.length / 3;
-        v.push(0, 0, 0); /* reserve the slot */
-        map[key] = [i, a, b, c0];
-        return i;
-    }
-    static _computeEvens(shape, evencache) {
-        for (let i = 0; i != evencache.length; i++) {
-            /* get surrounding vertices */
-            let connected = evencache[i];
-            let a = i * 3;
-            let n = connected.length;
-            let v = shape.vertices;
-            let u = 0;
-            /* Joe Warren proposed using the simplified weights for u (1995):
-                        u-------u
-                       / \     / \
-                      /   \   /   \
-                     /     \ /     \
-                    u-----1-n*u-----u
-                     \     / \     /
-                      \   /   \   /
-                       \ /     \ /
-                        u-------u */
-            if (n > 3) {
-                u = 3 / (8 * n);
-            }
-            else if (n === 3) {
-                u = 3 / 16;
-            }
-            else if (n === 2) {
-                /* this append when face are not triangle
-                   3/4--X--3/4 */
-                let k = 3 / 4;
-                let p0 = connected[0] * 3;
-                let p1 = connected[1] * 3;
-                v[a] = v[a++] * k + (v[p0++] + v[p1++]) / 2;
-                v[a] = v[a++] * k + (v[p0++] + v[p1++]) / 2;
-                v[a] = v[a] * k + (v[p0] + v[p1]) / 2;
-                return;
-            }
-            else {
-                /* nothing to do with degenerated mesh */
-                return;
-            }
-            let k = 1 - n * u;
-            v[a] = v[a++] * k + connected.map(a => v[a * 3]).reduce((a, b) => a + b, 0) * u;
-            v[a] = v[a++] * k + connected.map(a => v[a * 3 + 1]).reduce((a, b) => a + b, 0) * u;
-            v[a] = v[a] * k + connected.map(a => v[a * 3 + 2]).reduce((a, b) => a + b, 0) * u;
-        }
+        return list;
     }
 }
-MeshProcessor.DefaultSubdivisionLevel = 4;
 //# sourceMappingURL=MeshProcessor.js.map
 
 /***/ }),
@@ -849,13 +705,15 @@ MeshProcessor.DefaultSubdivisionLevel = 4;
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _MeshFactory__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MeshFactory */ "./src/build/Geometry/MeshFactory.js");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlatonicSolids", function() { return _MeshFactory__WEBPACK_IMPORTED_MODULE_0__["PlatonicSolids"]; });
+/* harmony import */ var _Mesh__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Mesh */ "./src/build/Geometry/Mesh.js");
+/* empty/unused harmony star reexport *//* harmony import */ var _MeshFactory__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./MeshFactory */ "./src/build/Geometry/MeshFactory.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "PlatonicSolids", function() { return _MeshFactory__WEBPACK_IMPORTED_MODULE_1__["PlatonicSolids"]; });
 
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshFactory", function() { return _MeshFactory__WEBPACK_IMPORTED_MODULE_0__["MeshFactory"]; });
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshFactory", function() { return _MeshFactory__WEBPACK_IMPORTED_MODULE_1__["MeshFactory"]; });
 
-/* harmony import */ var _MeshProcessor__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./MeshProcessor */ "./src/build/Geometry/MeshProcessor.js");
-/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshProcessor", function() { return _MeshProcessor__WEBPACK_IMPORTED_MODULE_1__["MeshProcessor"]; });
+/* harmony import */ var _MeshProcessor__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./MeshProcessor */ "./src/build/Geometry/MeshProcessor.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MeshProcessor", function() { return _MeshProcessor__WEBPACK_IMPORTED_MODULE_2__["MeshProcessor"]; });
+
 
 
 

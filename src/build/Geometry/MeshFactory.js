@@ -1,4 +1,4 @@
-import { Scalar } from './../Math';
+import { MeshProcessor } from './MeshProcessor';
 export var PlatonicSolids;
 (function (PlatonicSolids) {
     PlatonicSolids[PlatonicSolids["tetrahedron"] = 0] = "tetrahedron";
@@ -69,8 +69,8 @@ export class MeshFactory {
         const xz = Math.cos(V_ANGLE);
         let v = []; /* array of 21 vertices (x,y,z) */
         let n = []; /* array of 21 vertices (x,y,z) */
-        var hAngle1 = 0; /* start from 0 deg at 1st row */
-        var hAngle2 = H_ANGLE / 2; /* start from +36 deg at 2nd row */
+        var hAngle1 = -Math.PI; /* start from -180 deg at 1st row */
+        var hAngle2 = (H_ANGLE / 2) - Math.PI; /* start from -144 deg at 2nd row */
         /* the first top vertex at (0, r, 0). we use 5 vertices in order to isolate uv's coordinate for quad image texture */
         for (var i = 0; i < 5; i++) {
             v.push(0, radius, 0);
@@ -117,130 +117,39 @@ export class MeshFactory {
         shape.uvs = [];
         let a = 2 / 3;
         let b = 1 / 3;
-        shape.uvs.push([/*north*/ .1, 1, .3, 1, .5, 1, .7, 1, .9, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
+        shape.uvs.push([/*north*/ 0, 1, .2, 1, .4, 1, .6, 1, .8, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
             /* equatorial */ 0, a, .2, a, .4, a, .6, a, .8, a, 1, a, .1, b, .3, b, .5, b, .7, b, .9, b, 1.1, b]);
         return shape;
     }
-    /*
-        icosphere is a particular simple tesselation method where we project subdivided points to the sphere surface.
-        then we DO NOT relay on memory/compute intensive subdivision method.
-        TODO : because of incremental error propagation, we might consider to find analytic approach for vertex coordinate generation instead as parametric subdivision methods.
-    */
-    static CreateIcosphere(shape, radius, subdivisionLevel = MeshFactory.DefaultSubdivisionLevel, pattern = MeshFactory.DefaultLoopPattern) {
+    static GreateGeodesicGrid(shape, radius, a = MeshFactory.DefaultSubdivisionLevelA) {
         radius = Math.abs(radius || MeshFactory.DefaultRadius);
         shape = shape = MeshFactory._createIcosphereBase(shape || {}, radius);
-        subdivisionLevel = subdivisionLevel === undefined ? MeshFactory.DefaultSubdivisionLevel : Math.abs(subdivisionLevel);
-        pattern = pattern == undefined ? MeshFactory.DefaultLoopPattern : pattern != 4 && pattern != 9 ? MeshFactory.DefaultLoopPattern : pattern; /* ensure patternn is 4 OR 9 */
-        for (let i = 0; i != subdivisionLevel; i++) {
-            let map = {};
-            let newFaces = [];
-            let n = shape.indices.length;
-            for (let f = 0; f !== n;) {
-                let p0 = shape.indices[f++];
-                let p1 = shape.indices[f++];
-                let p2 = shape.indices[f++];
-                switch (pattern) {
-                    case (9):
-                        {
-                            /* 0
-                              / \
-                             /   \
-                            a --- g
-                           / \   / \
-                          /   \ /   \
-                         d --- c --- f
-                        / \   / \   / \
-                       /   \ /   \ /   \
-                      1 --- e --- b --- 2 */
-                            let t13 = 1.0 / 3;
-                            let t23 = 2.0 / 3;
-                            let t12 = .5;
-                            let a = MeshFactory._getParametricPoint(shape, p0, p1, t13, radius, map);
-                            let b = MeshFactory._getParametricPoint(shape, p1, p2, t23, radius, map);
-                            let c = MeshFactory._getParametricPoint(shape, a, b, t12, radius, map);
-                            let d = MeshFactory._getParametricPoint(shape, p0, p1, t23, radius, map);
-                            let e = MeshFactory._getParametricPoint(shape, p1, p2, t13, radius, map);
-                            let f = MeshFactory._getParametricPoint(shape, p2, p0, t13, radius, map);
-                            let g = MeshFactory._getParametricPoint(shape, p2, p0, t23, radius, map);
-                            newFaces.push(p0, a, g, a, d, c, a, c, g, g, c, f, d, p1, e, d, e, c, c, e, b, c, b, f, f, b, p2);
-                            break;
-                        }
-                    case (4):
-                    default: {
-                        /* 0
-                          / \
-                         /   \
-                        a --- c
-                       / \   / \
-                      /   \ /   \
-                     1 --- b --- 2 */
-                        let t = 0.5;
-                        let a = MeshFactory._getParametricPoint(shape, p0, p1, t, radius, map);
-                        let b = MeshFactory._getParametricPoint(shape, p1, p2, t, radius, map);
-                        let c = MeshFactory._getParametricPoint(shape, p2, p0, t, radius, map);
-                        newFaces.push(p0, a, c, a, p1, b, a, b, c, c, b, p2);
-                    }
+        a = a === undefined ? MeshFactory.DefaultSubdivisionLevelA : Math.abs(a);
+        let n = shape.indices.length;
+        let map = {};
+        let newFaces = [];
+        for (let fi = 0; fi !== n;) {
+            let p0 = shape.indices[fi++];
+            let p1 = shape.indices[fi++];
+            let p2 = shape.indices[fi++];
+            let vedge0 = MeshProcessor.DivideEdge(shape, p1, p0, a, radius, map);
+            let vedge1 = MeshProcessor.DivideEdge(shape, p1, p2, a, radius, map);
+            let hedges = vedge0.map((value, index, array) => MeshProcessor.DivideEdge(shape, value, vedge1[index], index, radius, undefined));
+            let row0, row1;
+            for (let i = 0; i != a;) {
+                row0 = hedges[i++];
+                row1 = hedges[i];
+                newFaces.push(row1[0], row0[0], row1[1]);
+                for (let k = 1; k < row1.length - 1; k++) {
+                    newFaces.push(row1[k], row0[k - 1], row0[k]);
+                    newFaces.push(row1[k], row0[k], row1[k + 1]);
                 }
             }
-            shape.indices = newFaces;
         }
+        shape.indices = newFaces;
         return shape;
-    }
-    static _getParametricPoint(shape, p1, p2, t, radius, map) {
-        /* IS the tricks to share the same point when divide top or bottom segment */
-        var k1 = p1 < 10 ? "*" : p1.toString();
-        var k2 = p2 < 10 ? "*" : p2.toString();
-        var key = (p1 < p2 ? k1 + "-" + k2 : k2 + "-" + k1) + "_" + t;
-        var i = map[key];
-        if (i) {
-            delete map[key]; /* avoid too many key */
-            return i;
-        }
-        let i1 = p1 * 3;
-        let i2 = p2 * 3;
-        let v = shape.vertices;
-        let x = v[i1] + (v[i2++] - v[i1++]) * t;
-        let y = v[i1] + (v[i2++] - v[i1++]) * t;
-        let z = v[i1] + (v[i2] - v[i1]) * t;
-        let l = Math.sqrt(x * x + y * y + z * z);
-        x /= l;
-        y /= l;
-        z /= l;
-        let n = shape.normals;
-        n.push(x, y, z);
-        i = v.length / 3;
-        map[key] = i;
-        v.push(x * radius, y * radius, z * radius);
-        i1 = p1 * 2;
-        i2 = p2 * 2;
-        /*
-           vertices are not distributed evenly across longitude and latitude then we MUST compute the uv with formula
-           theta is from +/-[0-PI]
-           phi is from  [0-PI]
-        */
-        let theta = Math.atan2(z, x);
-        let phi = Math.acos(y);
-        for (let j = 0; j != shape.uvs.length; j++) {
-            let uvs = shape.uvs[j];
-            let u1 = uvs[i1++];
-            let u2 = uvs[i2++];
-            let v1 = uvs[i1];
-            let v2 = uvs[i2];
-            let a = theta / (2 * Math.PI);
-            a = Scalar.WithinEpsilon(a, 0) ? 0 : a;
-            let u = theta >= 0 ? a : 1 + a;
-            let d1 = u1 - u;
-            let d2 = u2 - u;
-            if (Math.abs(d1) > .5 || Math.abs(d2) > .5) {
-                u += 1;
-            }
-            let v = 1 - phi / Math.PI;
-            uvs.push(u, v);
-        }
-        return i;
     }
 }
 MeshFactory.DefaultRadius = 1.0;
-MeshFactory.DefaultSubdivisionLevel = 4;
-MeshFactory.DefaultLoopPattern = 4;
+MeshFactory.DefaultSubdivisionLevelA = 8;
 //# sourceMappingURL=MeshFactory.js.map

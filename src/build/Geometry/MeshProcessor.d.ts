@@ -1,8 +1,7 @@
 import { IMesh } from "./Mesh";
 export declare class MeshProcessor {
-    static DefaultSubdivisionLevel: number;
-    static LoopSubdivision(shape: IMesh, level: number): IMesh;
-    private static _pushSingle;
-    private static _splitSegment;
-    private static _computeEvens;
+    static DivideEdge(shape: IMesh, p0: number, p1: number, a: number, radius: number, map: {
+        [key in string]: number[];
+    }): number[];
+    private static _divideEdge0;
 }

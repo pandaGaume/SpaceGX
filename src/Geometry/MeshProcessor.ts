@@ -1,173 +1,94 @@
+import { Scalar } from './../Math';
 import { IMesh } from "./Mesh";
 
 export class MeshProcessor {
 
-    public static DefaultSubdivisionLevel:number = 4;
-
-    public static LoopSubdivision(shape: IMesh, level : number): IMesh {
-
-        level = level === undefined ? MeshProcessor.DefaultSubdivisionLevel : Math.abs(level);
-        
-        for(let i=0;i!= level;i++) {
-             
-            let oddcache :{[key in string]:number[]} = {}
-            let newFaces: number[] = []
-            let n = shape.indices.length;
-            let v:number[] = shape.vertices;
-            let l = v.length/3;
-            let evencache:number[][] = [...Array(l)].map(a=>[]);        
-
-            /* compute odd */
-            for(let f=0; f !== n;) {
-                let tmp = f;
-                let p0 = shape.indices[f++];
-                let p1 = shape.indices[f++];
-                let p2 = shape.indices[f++];
+    public static DivideEdge(shape:IMesh, p0:number, p1:number, a:number, radius:number, map :{[key in string]:number[]}) : number[] {
  
-                   /* 0
-                     / \
-                    /   \
-                   a --- c
-                  / \   / \
-                 /   \ /   \
-                1 --- b --- 2 */    
-                let a = MeshProcessor._splitSegment(shape,tmp,p0,p1,p2,oddcache);
-                let b = MeshProcessor._splitSegment(shape,tmp,p1,p2,p0,oddcache);
-                let c = MeshProcessor._splitSegment(shape,tmp,p2,p0,p1,oddcache);
-                newFaces.push(p0, a, c, a, p1, b, a, b, c, c, b, p2);
-
-                /* prepare even cache */
-                MeshProcessor._pushSingle(evencache[p0],p1,p2);
-                MeshProcessor._pushSingle(evencache[p1],p0,p2);
-                MeshProcessor._pushSingle(evencache[p2],p0,p1);
+       if(map) {
+            var key:string = p0 + '_' + p1;
+            var list = map[key];
+            if( list ) {
+                return list;
             }
-            
-            /* compute remain odd on bounds bounds 
-                         0
-                        / \
-                       /   \
-                      /     \
-                    1/2--X--1/2 */
-
-            let bounds:number[][] = Object.keys(oddcache).map(key => oddcache[key]);
-            for( var j=0; j!= bounds.length;j++) {
-                let odd = bounds[j];
-                let i = odd[0] *3;
-                let a = odd[1] *3;
-                let b = odd[2] *3;
-                v[i++] = (v[a++]+v[b++]) / 2 ;
-                v[i++] = (v[a++]+v[b++]) / 2 ;
-                v[i  ] = (v[a  ]+v[b  ]) / 2 ;        
+            var inversedkey = p1 + '_' + p0;
+            list = map[inversedkey];
+            if( list ) {
+                return list.slice().reverse();
             }
-
-            /* compute even */
-            MeshProcessor._computeEvens(shape,evencache);
-            shape.indices = newFaces;
-        }
-        return shape;
-    }
-    
-    private static _pushSingle(array:number[], ... params:number[]){
-
-        for(let i=0;i!= params.length;i++){
-            let value:number = params[i];
-            let found:boolean = false;
-            if( array.length){
-                let j=0;
-                do {
-                  found = array[j] === value;
-                } while(!found && ++j<array.length);
-            }
-            if(!found){
-                array.push(value);
-            }
-        }
-    };
-
-    private static _splitSegment(shape: IMesh, fi:number, a:number, b:number, c0:number,map :{[key in string]:number[]}) : number {
-        
-        var key:string = (a<b? "" + a + "-" + b : "" + b + "-" + a);
-        var cached:number[] = map[key];
-        let v:number[] = shape.vertices;
-
-        if( cached ) {
-
-            /* compute odd with 2 faces :
-                        1/8
-                        / \
-                       /   \
-                      /     \
-                    3/8--X--3/8
-                     \      /
-                      \    /
-                       \  /
-                        1/8 */
-
-            let i = cached[0] *3;
-            let a = cached[1] *3;
-            let b = cached[2] *3;
-            let c = cached[3] *3;
-            let d = c0 *3;
-            let k3 = 3/8;
-            let k1 = 1/8; 
-            
-            v[i++] = k3 * (v[a++]+ v[b++]) + k1 * (v[c++] + v[d++]) ;
-            v[i++] = k3 * (v[a++]+ v[b++]) + k1 * (v[c++] + v[d++]) ;
-            v[i  ] = k3 * (v[a  ]+ v[b  ]) + k1 * (v[c  ] + v[d  ]) ;
-            delete map[key]; /* avoid too many key */
-            return cached[0];
-        }
- 
-        let faces:number[] = shape.indices; 
-        let i = shape.vertices.length/3;
-        v.push(0,0,0); /* reserve the slot */
-        map[key] = [i,a,b,c0];
-        return i;
+            list = MeshProcessor._divideEdge0(shape,p0,p1,a,radius);
+            map[key] = list;
+            return list;
+       } 
+       return MeshProcessor._divideEdge0(shape,p0,p1,a,radius);
     }
 
-    private static _computeEvens(shape:IMesh, evencache:number[][]) : void {
-        
-        for(let i=0;i!= evencache.length;i++){
-
-            /* get surrounding vertices */
-            let connected:number[] = evencache[i];
-            let a=i*3;
-            let n = connected.length;
-            let v:number[] = shape.vertices; 
-            let u = 0;
-            /* Joe Warren proposed using the simplified weights for u (1995):
-                        u-------u
-                       / \     / \
-                      /   \   /   \
-                     /     \ /     \
-                    u-----1-n*u-----u
-                     \     / \     /     
-                      \   /   \   / 
-                       \ /     \ /
-                        u-------u */ 
-            if( n > 3 ){
-                u = 3/(8*n) ;
-            } else if (n === 3) {
-                u = 3/16 ;
-            } else if( n === 2) {
-                /* this append when face are not triangle 
-                   3/4--X--3/4 */
+    private static _divideEdge0(shape:IMesh, p0:number, p1:number, a:number, radius:number) : number[] {
  
-                let k = 3/4
-                let p0 = connected[0]*3;
-                let p1 = connected[1]*3;
-                v[a] =  v[a++] * k + (v[p0++] + v[p1++])/2 ;
-                v[a] =  v[a++] * k + (v[p0++] + v[p1++])/2 ;
-                v[a] =  v[a  ] * k + (v[p0]   + v[p1  ])/2 ;
-                return;    
-            } else {
-                /* nothing to do with degenerated mesh */
-                return;
-            }      
-            let k = 1-n*u;
-            v[a] = v[a++] * k + connected.map(a=>v[a*3  ]).reduce((a,b)=>a+b,0) * u ;
-            v[a] = v[a++] * k + connected.map(a=>v[a*3+1]).reduce((a,b)=>a+b,0) * u ;
-            v[a] = v[a  ] * k + connected.map(a=>v[a*3+2]).reduce((a,b)=>a+b,0) * u ;
+        let list = [p0];
+        if(a != 0  && p0 != p1 ){
+            if(a > 1){
+                let vertices:number[] = shape.vertices;
+                let normals:number[] = shape.normals;
+                let uvs:number[] = shape.uvs[0];
+                let i0x = p0*3;
+                let i0y = i0x+1;
+                let i0z = i0x+2;
+
+                let i1x = p1*3;
+                let i1y = i1x+1;
+                let i1z = i1x+2;
+
+                let dx = (vertices[i1x]-vertices[i0x])/a;
+                let dy = (vertices[i1y]-vertices[i0y])/a;
+                let dz = (vertices[i1z]-vertices[i0z])/a;
+
+                let n = vertices.length/3 ;
+
+                for(let i=1; i!= a; i++) {
+                    let x:number = vertices[i0x] + dx*i;
+                    let y:number = vertices[i0y] + dy*i;
+                    let z:number = vertices[i0z] + dz*i;
+
+                    let l:number = Math.sqrt(x*x+y*y+z*z);
+                    x/=l;
+                    y/=l;
+                    z/=l;
+
+                    list.push(n++);
+                    vertices.push(x*radius,y*radius,z*radius);
+                    normals.push(x,y,z);
+
+                    /*  
+                        vertices are NOT distributed evenly across longitude and latitude then we MUST compute the uv with formula
+                        theta is from [-PI  ,PI  ] 
+                        phi   is from [-PI/2,PI/2]
+                    */  
+                    let theta = Math.atan2(z,x) - Math.PI ;
+                    let phi = Math.acos(y) ; 
+                    let v:number = 1 - phi/Math.PI ; // normalize 
+                    v = Scalar.WithinEpsilon(v,0)?0:v; // avoid artifact
+                    v = Scalar.WithinEpsilon(v,1)?1:v; // avoid artifact
+
+                    let u:number = theta / (2*Math.PI) ; // normalize
+                    u = theta >= 0 ?  u : 1 + u ;
+                    u = Scalar.WithinEpsilon(u,0)?0:u; // avoid artifact 
+                    u = Scalar.WithinEpsilon(u,1)?1:u; // avoid artifact 
+
+                    //avoid zip effect : 
+                    let u1 = uvs[p0*2];
+                    let u2 = uvs[p1*2]
+ 
+                    let d1 = u1 - u;
+                    let d2 = u2 - u;
+                    if( Math.abs(d1) > .5 || Math.abs(d2) > .5 ) {
+                        u+=1;
+                    }
+                    
+                    uvs.push(u,v);
+                }
+            }
+            list.push(p1);
         }
-    }
-}
+        return list;
+    }}
