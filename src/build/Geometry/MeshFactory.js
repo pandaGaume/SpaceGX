@@ -69,8 +69,8 @@ export class MeshFactory {
         const xz = Math.cos(V_ANGLE);
         let v = []; /* array of 21 vertices (x,y,z) */
         let n = []; /* array of 21 vertices (x,y,z) */
-        var hAngle1 = 0; /* start from 0 deg at 1st row */
-        var hAngle2 = H_ANGLE / 2; /* start from +36 deg at 2nd row */
+        var hAngle1 = -Math.PI; /* start from -180 deg at 1st row */
+        var hAngle2 = (H_ANGLE / 2) - Math.PI; /* start from -144 deg at 2nd row */
         /* the first top vertex at (0, r, 0). we use 5 vertices in order to isolate uv's coordinate for quad image texture */
         for (var i = 0; i < 5; i++) {
             v.push(0, radius, 0);
@@ -117,7 +117,7 @@ export class MeshFactory {
         shape.uvs = [];
         let a = 2 / 3;
         let b = 1 / 3;
-        shape.uvs.push([/*north*/ .1, 1, .3, 1, .5, 1, .7, 1, .9, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
+        shape.uvs.push([/*north*/ 0, 1, .2, 1, .4, 1, .6, 1, .8, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
             /* equatorial */ 0, a, .2, a, .4, a, .6, a, .8, a, 1, a, .1, b, .3, b, .5, b, .7, b, .9, b, 1.1, b]);
         return shape;
     }

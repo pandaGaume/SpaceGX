@@ -61,10 +61,10 @@ export class MeshProcessor {
 
                     /*  
                         vertices are NOT distributed evenly across longitude and latitude then we MUST compute the uv with formula
-                        theta is from +/-[0-PI] 
-                        phi is from  [0-PI]
+                        theta is from [-PI  ,PI  ] 
+                        phi   is from [-PI/2,PI/2]
                     */  
-                    let theta = Math.atan2(z,x);
+                    let theta = Math.atan2(z,x) - Math.PI ;
                     let phi = Math.acos(y) ; 
                     let v:number = 1 - phi/Math.PI ; // normalize 
                     v = Scalar.WithinEpsilon(v,0)?0:v; // avoid artifact
@@ -75,7 +75,7 @@ export class MeshProcessor {
                     u = Scalar.WithinEpsilon(u,0)?0:u; // avoid artifact 
                     u = Scalar.WithinEpsilon(u,1)?1:u; // avoid artifact 
 
-                    // avoid zip effect : 
+                    //avoid zip effect : 
                     let u1 = uvs[p0*2];
                     let u2 = uvs[p1*2]
  

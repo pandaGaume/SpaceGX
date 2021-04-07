@@ -516,8 +516,8 @@ class MeshFactory {
         const xz = Math.cos(V_ANGLE);
         let v = []; /* array of 21 vertices (x,y,z) */
         let n = []; /* array of 21 vertices (x,y,z) */
-        var hAngle1 = 0; /* start from 0 deg at 1st row */
-        var hAngle2 = H_ANGLE / 2; /* start from +36 deg at 2nd row */
+        var hAngle1 = -Math.PI; /* start from -180 deg at 1st row */
+        var hAngle2 = (H_ANGLE / 2) - Math.PI; /* start from -144 deg at 2nd row */
         /* the first top vertex at (0, r, 0). we use 5 vertices in order to isolate uv's coordinate for quad image texture */
         for (var i = 0; i < 5; i++) {
             v.push(0, radius, 0);
@@ -564,7 +564,7 @@ class MeshFactory {
         shape.uvs = [];
         let a = 2 / 3;
         let b = 1 / 3;
-        shape.uvs.push([/*north*/ .1, 1, .3, 1, .5, 1, .7, 1, .9, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
+        shape.uvs.push([/*north*/ 0, 1, .2, 1, .4, 1, .6, 1, .8, 1, /*south*/ .2, 0, .4, 0, .6, 0, .8, 0, 1, 0,
             /* equatorial */ 0, a, .2, a, .4, a, .6, a, .8, a, 1, a, .1, b, .3, b, .5, b, .7, b, .9, b, 1.1, b]);
         return shape;
     }
@@ -664,10 +664,10 @@ class MeshProcessor {
                     normals.push(x, y, z);
                     /*
                         vertices are NOT distributed evenly across longitude and latitude then we MUST compute the uv with formula
-                        theta is from +/-[0-PI]
-                        phi is from  [0-PI]
+                        theta is from [-PI  ,PI  ]
+                        phi   is from [-PI/2,PI/2]
                     */
-                    let theta = Math.atan2(z, x);
+                    let theta = Math.atan2(z, x) - Math.PI;
                     let phi = Math.acos(y);
                     let v = 1 - phi / Math.PI; // normalize 
                     v = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(v, 0) ? 0 : v; // avoid artifact
@@ -676,7 +676,7 @@ class MeshProcessor {
                     u = theta >= 0 ? u : 1 + u;
                     u = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(u, 0) ? 0 : u; // avoid artifact 
                     u = _Math__WEBPACK_IMPORTED_MODULE_0__["Scalar"].WithinEpsilon(u, 1) ? 1 : u; // avoid artifact 
-                    // avoid zip effect : 
+                    //avoid zip effect : 
                     let u1 = uvs[p0 * 2];
                     let u2 = uvs[p1 * 2];
                     let d1 = u1 - u;

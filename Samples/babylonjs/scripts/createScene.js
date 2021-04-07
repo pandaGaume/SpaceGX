@@ -32,7 +32,7 @@ function  makeTextPlane(text, color, size, scene) {
 function  makeOrientedTextPlane(text, color, height, width, origin, normal, scene) {
     var dynamicTexture = new BABYLON.DynamicTexture("DynamicTexture", 50, scene, true);
     dynamicTexture.hasAlpha = true;
-    dynamicTexture.drawText(text, 5, 40, "bold 16px Arial", color , "transparent", true);
+    dynamicTexture.drawText(text, 5, 40, "bold 8px Arial", color , "transparent", true);
     var sourcePlane = BABYLON.Plane.FromPositionAndNormal(origin,normal);
     var plane = BABYLON.MeshBuilder.CreatePlane("plane", {height:height, width: width, sourcePlane: sourcePlane, sideOrientation: BABYLON.Mesh.DOUBLESIDE}, scene);
     plane.material = new BABYLON.StandardMaterial("TextPlaneMaterial", scene);
@@ -116,7 +116,7 @@ function createScene(canvas,engine){
     // Create the scene space
     var scene = new BABYLON.Scene(engine);
     // Add a camera to the scene and attach it to the canvas
-    var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 40, new BABYLON.Vector3(0,0,0), scene);
+    var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 2, 30, new BABYLON.Vector3(0,0,0), scene);
     camera.attachControl(canvas, true);
 
     // Add lights to the scene
@@ -139,7 +139,7 @@ function createScene(canvas,engine){
     //isocahedre.enableEdgesRendering(.9999);    
     //isocahedre.edgesWidth = 8.0;
     //isocahedre.edgesColor = new BABYLON.Color4(1, 0, 0, 1);
-    //showUVIndices(isocahedre,"black",2,scene);
+    //showUVIndices(isocahedre,"black",1,scene);
     //showVertexIndices(isocahedre,"black",.3,scene);
     //showTriangleIndices(isocahedre,"black",.4,scene);
     //showNormals(isocahedre,.1,BABYLON.Color3.Blue(),scene);
